@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediAlert – Prototipo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f8; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 20px; }
+
+  /* Phone frame */
+  .phone { width: 375px; min-height: 750px; background: #fff; border-radius: 40px; box-shadow: 0 30px 80px rgba(0,0,0,0.3), 0 0 0 8px #1a1a2e, 0 0 0 10px #16213e; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+  .status-bar { background: #1A73E8; padding: 12px 20px 8px; display: flex; justify-content: space-between; align-items: center; color: white; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .notch { width: 120px; height: 20px; background: #1a1a2e; border-radius: 0 0 16px 16px; margin: 0 auto; }
+  .screen { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+
+  /* Screens */
+  .screen-view { display: none; flex-direction: column; flex: 1; animation: fadeIn 0.25s ease; }
+  .screen-view.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Colors */
+  :root { --blue: #1A73E8; --teal: #00BFA5; --orange: #FF6B35; --dark: #0D1B2A; --gray: #546E7A; --light: #F0F7FF; }
+
+  /* Nav bar */
+  .nav-bar { background: var(--blue); padding: 16px 20px 12px; color: white; flex-shrink: 0; }
+  .nav-bar.teal { background: var(--teal); }
+  .nav-bar.orange { background: var(--orange); }
+  .nav-bar.dark { background: var(--dark); }
+  .nav-title { font-size: 18px; font-weight: 700; }
+  .nav-sub { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+  .back-btn { font-size: 13px; opacity: 0.9; cursor: pointer; margin-bottom: 4px; display: inline-block; }
+  .back-btn:hover { opacity: 1; }
+
+  /* Content */
+  .content { padding: 16px; flex: 1; background: #F8FBFF; }
+  .content.white { background: #fff; }
+  .content.dark-bg { background: var(--dark); }
+
+  /* Cards */
+  .card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .card.blue-border { border-left: 4px solid var(--blue); }
+  .card.teal-border { border-left: 4px solid var(--teal); }
+  .card.orange-border { border-left: 4px solid var(--orange); }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+  .card-sub { font-size: 12px; color: var(--gray); }
+
+  /* Buttons */
+  .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.1s, opacity 0.1s; text-align: center; margin-bottom: 10px; }
+  .btn:active { transform: scale(0.97); opacity: 0.9; }
+  .btn-primary { background: var(--blue); color: white; }
+  .btn-secondary { background: var(--teal); color: white; }
+  .btn-orange { background: var(--orange); color: white; }
+  .btn-outline { background: transparent; color: var(--blue); border: 2px solid var(--blue); }
+  .btn-gray { background: #ECEFF1; color: var(--dark); }
+  .btn-small { padding: 10px 14px; font-size: 13px; width: auto; display: inline-block; margin-right: 8px; border-radius: 10px; cursor: pointer; border: none; font-weight: 600; }
+  .btn-sm-blue { background: var(--blue); color: white; }
+  .btn-sm-teal { background: var(--teal); color: white; }
+  .btn-sm-orange { background: var(--orange); color: white; }
+
+  /* Form elements */
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--gray); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input { width: 100%; padding: 12px 14px; border: 1.5px solid #dde; border-radius: 10px; font-size: 14px; color: var(--dark); background: #fafbff; outline: none; transition: border-color 0.2s; }
+  .form-input:focus { border-color: var(--blue); }
+
+  /* Welcome screen */
+  .welcome-logo { background: var(--blue); width: 80px; height: 80px; border-radius: 22px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; }
+  .cross-h { width: 42px; height: 12px; background: white; border-radius: 3px; position: absolute; }
+  .cross-v { width: 12px; height: 42px; background: white; border-radius: 3px; position: absolute; }
+  .cross-wrap { position: relative; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; }
+  .teal-dot { width: 10px; height: 10px; background: var(--teal); border-radius: 50%; position: absolute; bottom: 6px; right: 6px; }
+  .welcome-title { font-size: 28px; font-weight: 800; color: var(--dark); text-align: center; }
+  .welcome-sub { font-size: 14px; color: var(--gray); text-align: center; margin: 6px 0 28px; }
+
+  /* Pill/badge */
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-blue { background: #E3F0FF; color: var(--blue); }
+  .badge-teal { background: #E0FAF5; color: #007D6F; }
+  .badge-orange { background: #FFF0E8; color: #D04E1A; }
+  .badge-green { background: #E8F5E9; color: #2E7D32; }
+  .badge-red { background: #FFEBEE; color: #C62828; }
+
+  /* Med row */
+  .med-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f2f5; }
+  .med-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .med-icon.blue { background: #E3F0FF; }
+  .med-icon.teal { background: #E0FAF5; }
+  .med-icon.orange { background: #FFF0E8; }
+  .med-info { flex: 1; }
+  .med-name { font-size: 14px; font-weight: 700; color: var(--dark); }
+  .med-detail { font-size: 12px; color: var(--gray); }
+  .med-action { flex-shrink: 0; }
+
+  /* Progress ring */
+  .progress-circle { width: 80px; height: 80px; position: relative; margin: 0 auto; }
+  .prog-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 20px; font-weight: 800; color: var(--dark); }
+
+  /* Timeline step */
+  .flow-step { display: flex; gap: 12px; margin-bottom: 0; }
+  .step-line-wrap { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: white; flex-shrink: 0; }
+  .step-connector { width: 2px; background: #dde; flex: 1; min-height: 24px; margin: 4px 0; }
+  .step-content { flex: 1; padding-bottom: 20px; }
+  .step-title { font-size: 14px; font-weight: 700; color: var(--dark); margin-bottom: 3px; }
+  .step-desc { font-size: 12px; color: var(--gray); }
+
+  /* Alert notification */
+  .alert-notif { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 16px; margin-bottom: 12px; border-left: 4px solid var(--orange); }
+  .notif-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .notif-icon { font-size: 22px; }
+  .notif-app { font-size: 11px; color: var(--gray); font-weight: 600; }
+  .notif-title { font-size: 14px; font-weight: 700; color: var(--dark); }
+  .notif-body { font-size: 13px; color: var(--gray); }
+
+  /* Bottom nav */
+  .bottom-nav { background: white; border-top: 1px solid #eef; display: flex; padding: 8px 0 4px; flex-shrink: 0; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 4px; }
+  .nav-item.active .nav-icon { color: var(--blue); }
+  .nav-item.active .nav-label { color: var(--blue); font-weight: 700; }
+  .nav-icon { font-size: 22px; color: #aab; }
+  .nav-label { font-size: 10px; color: #aab; }
+
+  /* Stats */
+  .stat-row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .stat-card { flex: 1; background: white; border-radius: 14px; padding: 14px 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .stat-num { font-size: 26px; font-weight: 800; }
+  .stat-num.blue { color: var(--blue); }
+  .stat-num.teal { color: var(--teal); }
+  .stat-num.orange { color: var(--orange); }
+  .stat-label { font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+  /* Patient card */
+  .patient-card { background: white; border-radius: 16px; padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 12px; }
+  .patient-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .patient-avatar.blue { background: #E3F0FF; }
+  .patient-avatar.teal { background: #E0FAF5; }
+  .patient-status { flex: 1; }
+  .patient-name { font-size: 14px; font-weight: 700; color: var(--dark); }
+  .patient-info { font-size: 12px; color: var(--gray); }
+
+  /* Section header */
+  .section-head { font-size: 13px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.8px; margin: 16px 0 8px; }
+
+  /* Success screen */
+  .success-icon { width: 80px; height: 80px; background: #E8F5E9; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 38px; }
+  .success-title { font-size: 22px; font-weight: 800; color: var(--dark); text-align: center; margin-bottom: 8px; }
+  .success-sub { font-size: 14px; color: var(--gray); text-align: center; }
+
+  /* Scrollbar */
+  .screen::-webkit-scrollbar, .content::-webkit-scrollbar { width: 0; }
+
+  /* Toggle */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f2f5; }
+  .toggle-label { font-size: 14px; color: var(--dark); font-weight: 500; }
+  .toggle { width: 44px; height: 24px; background: var(--blue); border-radius: 12px; cursor: pointer; position: relative; }
+  .toggle::after { content:''; width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 3px; right: 3px; transition: 0.2s; }
+  .toggle.off { background: #ccc; }
+  .toggle.off::after { right: auto; left: 3px; }
+
+  /* Day pill row */
+  .day-row { display: flex; gap: 6px; margin-top: 8px; }
+  .day-pill { flex: 1; padding: 7px 0; border-radius: 8px; text-align: center; font-size: 12px; font-weight: 700; cursor: pointer; border: 1.5px solid #dde; color: var(--gray); transition: 0.15s; }
+  .day-pill.on { background: var(--blue); color: white; border-color: var(--blue); }
+
+  /* Info row */
+  .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f2f5; font-size: 13px; }
+  .info-key { color: var(--gray); }
+  .info-val { color: var(--dark); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════ PHONE FRAME ════════════════════════════════════ -->
+<div class="phone">
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="notch"></div>
+    <span>▲▲▲ 100%</span>
+  </div>
+
+  <div class="screen">
+
+    <!-- ══════════════════════════════════════════════════════
+         FLUJO 1 — INICIO / BIENVENIDA
+    ══════════════════════════════════════════════════════ -->
+
+    <!-- S1: Welcome -->
+    <div class="screen-view active" id="s-welcome">
+      <div class="content white" style="justify-content:center;display:flex;flex-direction:column;padding:32px 24px;">
+        <div class="welcome-logo">
+          <div class="cross-wrap">
+            <div class="cross-h"></div>
+            <div class="cross-v"></div>
+            <div class="teal-dot"></div>
+          </div>
+        </div>
+        <div class="welcome-title">MediAlert</div>
+        <div class="welcome-sub">Tu recordatorio de salud inteligente</div>
+        <button class="btn btn-primary" onclick="go('s-register')">📝 Crear cuenta</button>
+        <button class="btn btn-outline" onclick="go('s-login')">🔑 Iniciar sesión</button>
+        <div style="text-align:center;margin-top:8px;font-size:12px;color:var(--gray);">¿Solo explorar? <span style="color:var(--blue);font-weight:700;cursor:pointer;" onclick="go('s-home')">Entrar sin registro →</span></div>
+      </div>
+    </div>
+
+    <!-- S1b: Register -->
+    <div class="screen-view" id="s-register">
+      <div class="nav-bar">
+        <div class="back-btn" onclick="go('s-welcome')">← Volver</div>
+        <div class="nav-title">Crear cuenta</div>
+        <div class="nav-sub">Flujo 1 — Paso 1: Registro</div>
+      </div>
+      <div class="content">
+        <div class="form-group">
+          <label class="form-label">Nombre completo</label>
+          <input class="form-input" type="text" placeholder="Ej. María González" value="María González">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Correo electrónico</label>
+          <input class="form-input" type="email" placeholder="correo@ejemplo.com" value="maria@ejemplo.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input class="form-input" type="password" placeholder="Mínimo 8 caracteres" value="••••••••">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de nacimiento</label>
+          <input class="form-input" type="text" placeholder="DD/MM/AAAA" value="15/03/1958">
+        </div>
+        <div style="background:#E3F0FF;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--blue);">
+          ℹ️ Tu información es privada y solo se usa para personalizar tus recordatorios.
+        </div>
+        <button class="btn btn-primary" onclick="go('s-profile-setup')">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- S1c: Profile setup -->
+    <div class="screen-view" id="s-profile-setup">
+      <div class="nav-bar">
+        <div class="back-btn" onclick="go('s-register')">← Volver</div>
+        <div class="nav-title">Perfil médico</div>
+        <div class="nav-sub">Flujo 1 — Paso 2: Configuración inicial</div>
+      </div>
+      <div class="content">
+        <div class="card" style="background:#E3F0FF;box-shadow:none;margin-bottom:16px;">
+          <div style="font-size:13px;color:var(--blue);font-weight:600;">Paso 2 de 2 — Perfil médico (opcional)</div>
+          <div style="font-size:12px;color:var(--gray);margin-top:4px;">Puedes completarlo después desde Ajustes.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Condición principal</label>
+          <input class="form-input" type="text" placeholder="Ej. Hipertensión, Diabetes" value="Hipertensión">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Médico tratante (opcional)</label>
+          <input class="form-input" type="text" placeholder="Dr. / Dra." value="">
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Activar recordatorios sonoros</span>
+          <div class="toggle"></div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Notificaciones push</span>
+          <div class="toggle"></div>
+        </div>
+        <div style="height:16px;"></div>
+        <button class="btn btn-primary" onclick="go('s-home')">✅ ¡Listo, ingresar!</button>
+        <button class="btn btn-gray" onclick="go('s-home')">Omitir por ahora</button>
+      </div>
+    </div>
+
+    <!-- S1d: Login -->
+    <div class="screen-view" id="s-login">
+      <div class="nav-bar">
+        <div class="back-btn" onclick="go('s-welcome')">← Volver</div>
+        <div class="nav-title">Iniciar sesión</div>
+        <div class="nav-sub">Flujo 1 — Acceso de usuario registrado</div>
+      </div>
+      <div class="content">
+        <div class="form-group">
+          <label class="form-label">Correo electrónico</label>
+          <input class="form-input" type="email" value="maria@ejemplo.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input class="form-input" type="password" value="••••••••">
+        </div>
+        <div style="text-align:right;font-size:12px;color:var(--blue);margin-bottom:18px;cursor:pointer;">¿Olvidaste tu contraseña?</div>
+        <button class="btn btn-primary" onclick="go('s-home')">Ingresar →</button>
+        <button class="btn btn-outline" onclick="go('s-welcome')">← Volver al inicio</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         PANTALLA PRINCIPAL / HOME
+    ══════════════════════════════════════════════════════ -->
+
+    <!-- S2: Home Dashboard -->
+    <div class="screen-view" id="s-home">
+      <div class="nav-bar" style="padding-bottom:16px;">
+        <div class="nav-title">¡Buenos días, María! 👋</div>
+        <div class="nav-sub">Lunes, 5 de mayo de 2025</div>
+      </div>
+      <div class="content">
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-num blue">3</div>
+            <div class="stat-label">Pendientes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num teal">2</div>
+            <div class="stat-label">Tomados hoy</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num orange">87%</div>
+            <div class="stat-label">Adherencia</div>
+          </div>
+        </div>
+
+        <div class="alert-notif">
+          <div class="notif-header">
+            <div class="notif-icon">🔔</div>
+            <div>
+              <div class="notif-app">MediAlert · Ahora</div>
+              <div class="notif-title">¡Es hora de tu medicamento!</div>
+            </div>
+          </div>
+          <div class="notif-body">Losartan 50mg · 1 tableta · Antes del desayuno</div>
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <button class="btn-small btn-sm-teal" onclick="go('s-confirm-dose')">✓ Tomé</button>
+            <button class="btn-small btn-sm-orange" onclick="go('s-home')" style="background:#FFF0E8;color:var(--orange);">Posponer</button>
+          </div>
+        </div>
+
+        <div class="section-head">Medicamentos de hoy</div>
+
+        <div class="card">
+          <div class="med-row">
+            <div class="med-icon blue">💊</div>
+            <div class="med-info">
+              <div class="med-name">Losartan 50mg</div>
+              <div class="med-detail">8:00 AM · 1 tableta</div>
+            </div>
+            <span class="badge badge-orange">Pendiente</span>
+          </div>
+          <div class="med-row">
+            <div class="med-icon teal">💉</div>
+            <div class="med-info">
+              <div class="med-name">Metformina 500mg</div>
+              <div class="med-detail">12:00 PM · Con almuerzo</div>
+            </div>
+            <span class="badge badge-green">✓ Tomado</span>
+          </div>
+          <div class="med-row" style="border-bottom:none;">
+            <div class="med-icon orange">🩺</div>
+            <div class="med-info">
+              <div class="med-name">Atorvastatina 20mg</div>
+              <div class="med-detail">8:00 PM · Antes de dormir</div>
+            </div>
+            <span class="badge badge-blue">Más tarde</span>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="go('s-add-med')">+ Agregar medicamento</button>
+        <button class="btn btn-gray" onclick="go('s-cuidador')">👨‍👩‍👧 Modo Cuidador</button>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item active" onclick="go('s-home')"><span class="nav-icon">🏠</span><span class="nav-label">Inicio</span></div>
+        <div class="nav-item" onclick="go('s-add-med')"><span class="nav-icon">➕</span><span class="nav-label">Agregar</span></div>
+        <div class="nav-item" onclick="go('s-historial')"><span class="nav-icon">📊</span><span class="nav-label">Historial</span></div>
+        <div class="nav-item" onclick="go('s-cuidador')"><span class="nav-icon">👥</span><span class="nav-label">Cuidador</span></div>
+        <div class="nav-item" onclick="go('s-welcome')"><span class="nav-icon">⚙️</span><span class="nav-label">Ajustes</span></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         FLUJO 2 — RECORDATORIO DE MEDICAMENTO
+    ══════════════════════════════════════════════════════ -->
+
+    <!-- S3: Add Med Step 1 -->
+    <div class="screen-view" id="s-add-med">
+      <div class="nav-bar teal">
+        <div class="back-btn" onclick="go('s-home')">← Inicio</div>
+        <div class="nav-title">Agregar medicamento</div>
+        <div class="nav-sub">Flujo 2 — Paso 1 de 3</div>
+      </div>
+      <div class="content">
+        <div class="form-group">
+          <label class="form-label">Nombre del medicamento</label>
+          <input class="form-input" type="text" placeholder="Ej. Losartan 50mg" value="Aspirina 100mg">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dosis / Presentación</label>
+          <input class="form-input" type="text" placeholder="Ej. 1 tableta, 2 cápsulas" value="1 tableta">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hora de toma principal</label>
+          <input class="form-input" type="time" value="08:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Instrucciones especiales</label>
+          <input class="form-input" type="text" placeholder="Ej. Con agua, antes de comer" value="Con desayuno">
+        </div>
+        <button class="btn btn-secondary" onclick="go('s-add-med-2')">Siguiente → Frecuencia</button>
+        <button class="btn btn-gray" onclick="go('s-home')">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- S3b: Add Med Step 2 -->
+    <div class="screen-view" id="s-add-med-2">
+      <div class="nav-bar teal">
+        <div class="back-btn" onclick="go('s-add-med')">← Volver</div>
+        <div class="nav-title">Frecuencia</div>
+        <div class="nav-sub">Flujo 2 — Paso 2 de 3</div>
+      </div>
+      <div class="content">
+        <div class="form-group">
+          <label class="form-label">Frecuencia</label>
+          <select class="form-input">
+            <option selected>Diario</option>
+            <option>Cada 8 horas</option>
+            <option>Cada 12 horas</option>
+            <option>Días específicos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Días de la semana</label>
+          <div class="day-row">
+            <div class="day-pill on">L</div>
+            <div class="day-pill on">M</div>
+            <div class="day-pill on">X</div>
+            <div class="day-pill on">J</div>
+            <div class="day-pill on">V</div>
+            <div class="day-pill on">S</div>
+            <div class="day-pill on">D</div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">¿Tiene fecha de fin?</span>
+          <div class="toggle off" id="end-toggle" onclick="this.classList.toggle('off');document.getElementById('end-date-row').style.display=this.classList.contains('off')?'none':'block'"></div>
+        </div>
+        <div id="end-date-row" style="display:none;" class="form-group">
+          <label class="form-label">Fecha de fin del tratamiento</label>
+          <input class="form-input" type="date" value="2025-06-30">
+        </div>
+        <div style="height:10px;"></div>
+        <button class="btn btn-secondary" onclick="go('s-add-med-3')">Siguiente → Confirmar</button>
+        <button class="btn btn-gray" onclick="go('s-add-med')">← Volver</button>
+      </div>
+    </div>
+
+    <!-- S3c: Add Med Step 3 - Confirm -->
+    <div class="screen-view" id="s-add-med-3">
+      <div class="nav-bar teal">
+        <div class="back-btn" onclick="go('s-add-med-2')">← Volver</div>
+        <div class="nav-title">Confirmar recordatorio</div>
+        <div class="nav-sub">Flujo 2 — Paso 3 de 3</div>
+      </div>
+      <div class="content">
+        <div class="card teal-border" style="margin-bottom:16px;">
+          <div class="section-head" style="margin-top:0;">Resumen del medicamento</div>
+          <div class="info-row"><span class="info-key">Nombre</span><span class="info-val">Aspirina 100mg</span></div>
+          <div class="info-row"><span class="info-key">Dosis</span><span class="info-val">1 tableta</span></div>
+          <div class="info-row"><span class="info-key">Hora</span><span class="info-val">08:00 AM</span></div>
+          <div class="info-row"><span class="info-key">Frecuencia</span><span class="info-val">Diario</span></div>
+          <div class="info-row" style="border:none;"><span class="info-key">Instrucciones</span><span class="info-val">Con desayuno</span></div>
+        </div>
+        <div style="background:#E0FAF5;border-radius:12px;padding:12px;margin-bottom:16px;font-size:13px;color:#007D6F;">
+          🔔 Se programará una notificación automática todos los días a las 8:00 AM.
+        </div>
+        <button class="btn btn-secondary" onclick="go('s-med-saved')">✅ Guardar recordatorio</button>
+        <button class="btn btn-gray" onclick="go('s-home')">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- S3d: Saved confirmation -->
+    <div class="screen-view" id="s-med-saved">
+      <div class="nav-bar teal">
+        <div class="nav-title">¡Guardado!</div>
+      </div>
+      <div class="content white" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Recordatorio creado</div>
+        <div class="success-sub" style="margin-bottom:24px;">Tu medicamento <strong>Aspirina 100mg</strong> quedó programado para todos los días a las 8:00 AM.</div>
+        <div style="background:#E0FAF5;border-radius:14px;padding:14px 16px;width:100%;margin-bottom:20px;">
+          <div style="font-size:12px;color:#007D6F;font-weight:700;margin-bottom:6px;">Próxima notificación</div>
+          <div style="font-size:20px;font-weight:800;color:var(--dark);">Mañana · 08:00 AM</div>
+        </div>
+
+        <div class="section-head" style="align-self:flex-start;">¿Qué pasa cuando suena la alarma?</div>
+        <div style="width:100%;">
+          <div class="flow-step">
+            <div class="step-line-wrap"><div class="step-circle" style="background:var(--teal);font-size:16px;">🔔</div><div class="step-connector"></div></div>
+            <div class="step-content"><div class="step-title">Recibes la notificación</div><div class="step-desc">Con sonido y vibración en tu celular</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="step-line-wrap"><div class="step-circle" style="background:var(--blue);font-size:16px;">👆</div><div class="step-connector"></div></div>
+            <div class="step-content"><div class="step-title">Confirmas que tomaste</div><div class="step-desc">Tocas "¡Tomé!" en la alerta</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="step-line-wrap"><div class="step-circle" style="background:var(--orange);font-size:16px;">📊</div></div>
+            <div class="step-content"><div class="step-title">Se registra en tu historial</div><div class="step-desc">Tu adherencia se actualiza automáticamente</div></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="go('s-home')" style="margin-top:20px;width:100%;">← Ir al inicio</button>
+      </div>
+    </div>
+
+    <!-- S4: Confirm dose (notification tap) -->
+    <div class="screen-view" id="s-confirm-dose">
+      <div class="nav-bar orange">
+        <div class="back-btn" onclick="go('s-home')">← Volver</div>
+        <div class="nav-title">🔔 Recordatorio</div>
+        <div class="nav-sub">Flujo 2 — Confirmar toma</div>
+      </div>
+      <div class="content white" style="display:flex;flex-direction:column;align-items:center;padding:24px;">
+        <div style="width:90px;height:90px;background:#FFF0E8;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;margin-bottom:16px;">💊</div>
+        <div style="font-size:22px;font-weight:800;color:var(--dark);text-align:center;margin-bottom:6px;">Losartan 50mg</div>
+        <div style="font-size:14px;color:var(--gray);text-align:center;margin-bottom:4px;">1 tableta · Antes del desayuno</div>
+        <div style="font-size:13px;color:var(--orange);font-weight:700;margin-bottom:24px;">⏰ Programado: 8:00 AM</div>
+        <button class="btn btn-secondary" onclick="go('s-dose-confirmed')">✓ ¡Ya tomé mi medicamento!</button>
+        <button class="btn btn-orange" onclick="go('s-home')">⏱ Posponer 30 minutos</button>
+        <button class="btn btn-gray" onclick="go('s-home')">✕ Omitir esta vez</button>
+        <div style="background:#F8FBFF;border-radius:12px;padding:12px 14px;width:100%;margin-top:8px;">
+          <div style="font-size:12px;color:var(--gray);">💡 <strong>Recuerda:</strong> tomar Losartan con agua. Evita el jugo de toronja.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S4b: Dose confirmed -->
+    <div class="screen-view" id="s-dose-confirmed">
+      <div class="nav-bar teal">
+        <div class="nav-title">¡Excelente!</div>
+      </div>
+      <div class="content white" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;">
+        <div class="success-icon" style="font-size:42px;">🎉</div>
+        <div class="success-title">¡Toma registrada!</div>
+        <div class="success-sub" style="margin-bottom:20px;"><strong>Losartan 50mg</strong> registrado a las 8:14 AM</div>
+        <div class="stat-row" style="width:100%;">
+          <div class="stat-card"><div class="stat-num teal">87%</div><div class="stat-label">Adherencia</div></div>
+          <div class="stat-card"><div class="stat-num blue">23</div><div class="stat-label">Días seguidos</div></div>
+        </div>
+        <div style="background:#E0FAF5;border-radius:12px;padding:12px 14px;width:100%;margin:8px 0 20px;">
+          <div style="font-size:13px;color:#007D6F;">🔔 <strong>Próximo recordatorio:</strong> Metformina 500mg · 12:00 PM</div>
+        </div>
+        <button class="btn btn-primary" onclick="go('s-home')">← Volver al inicio</button>
+        <button class="btn btn-gray" onclick="go('s-historial')">Ver historial completo</button>
+      </div>
+    </div>
+
+    <!-- Historial -->
+    <div class="screen-view" id="s-historial">
+      <div class="nav-bar dark">
+        <div class="back-btn" onclick="go('s-home')">← Inicio</div>
+        <div class="nav-title">📊 Historial de adherencia</div>
+      </div>
+      <div class="content">
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-num teal">87%</div><div class="stat-label">Este mes</div></div>
+          <div class="stat-card"><div class="stat-num blue">23</div><div class="stat-label">Racha actual</div></div>
+        </div>
+        <div class="section-head">Hoy — 5 de mayo</div>
+        <div class="card">
+          <div class="med-row">
+            <div class="med-icon teal">💊</div>
+            <div class="med-info"><div class="med-name">Metformina 500mg</div><div class="med-detail">12:05 PM</div></div>
+            <span class="badge badge-green">✓ Tomado</span>
+          </div>
+          <div class="med-row" style="border:none;">
+            <div class="med-icon blue">💊</div>
+            <div class="med-info"><div class="med-name">Losartan 50mg</div><div class="med-detail">8:14 AM</div></div>
+            <span class="badge badge-green">✓ Tomado</span>
+          </div>
+        </div>
+        <div class="section-head">Ayer — 4 de mayo</div>
+        <div class="card">
+          <div class="med-row">
+            <div class="med-icon blue">💊</div>
+            <div class="med-info"><div class="med-name">Losartan 50mg</div><div class="med-detail">8:02 AM</div></div>
+            <span class="badge badge-green">✓ Tomado</span>
+          </div>
+          <div class="med-row" style="border:none;">
+            <div class="med-icon orange">💊</div>
+            <div class="med-info"><div class="med-name">Atorvastatina 20mg</div><div class="med-detail">—</div></div>
+            <span class="badge badge-red">✗ Omitido</span>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="go('s-home')">← Volver al inicio</button>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item" onclick="go('s-home')"><span class="nav-icon">🏠</span><span class="nav-label">Inicio</span></div>
+        <div class="nav-item" onclick="go('s-add-med')"><span class="nav-icon">➕</span><span class="nav-label">Agregar</span></div>
+        <div class="nav-item active"><span class="nav-icon">📊</span><span class="nav-label">Historial</span></div>
+        <div class="nav-item" onclick="go('s-cuidador')"><span class="nav-icon">👥</span><span class="nav-label">Cuidador</span></div>
+        <div class="nav-item" onclick="go('s-welcome')"><span class="nav-icon">⚙️</span><span class="nav-label">Ajustes</span></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         FLUJO 3 — MODO CUIDADOR
+    ══════════════════════════════════════════════════════ -->
+
+    <!-- S5: Cuidador home -->
+    <div class="screen-view" id="s-cuidador">
+      <div class="nav-bar orange">
+        <div class="back-btn" onclick="go('s-home')">← Inicio</div>
+        <div class="nav-title">👥 Modo Cuidador</div>
+        <div class="nav-sub">Flujo 3 — Panel de supervisión</div>
+      </div>
+      <div class="content">
+        <div class="card orange-border">
+          <div class="card-title">¿Qué es el Modo Cuidador?</div>
+          <div class="card-sub">Supervisa los medicamentos de un familiar o paciente. Recibirás alertas si omiten una dosis.</div>
+        </div>
+        <div class="section-head">Mis pacientes vinculados</div>
+
+        <div class="patient-card">
+          <div class="patient-avatar blue">👴</div>
+          <div class="patient-status">
+            <div class="patient-name">Roberto González (Papá)</div>
+            <div class="patient-info">3 medicamentos · Último: hace 2h</div>
+          </div>
+          <span class="badge badge-green">✓ Al día</span>
+        </div>
+
+        <div class="patient-card" onclick="go('s-cuidador-alerta')">
+          <div class="patient-avatar teal">👩</div>
+          <div class="patient-status">
+            <div class="patient-name">Carmen López (Mamá)</div>
+            <div class="patient-info">2 medicamentos · Omisión detectada</div>
+          </div>
+          <span class="badge badge-red">⚠️ Alerta</span>
+        </div>
+
+        <button class="btn btn-orange" onclick="go('s-vincular')">+ Vincular nuevo paciente</button>
+        <button class="btn btn-gray" onclick="go('s-cuidador-alerta')">Ver alerta de Carmen →</button>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item" onclick="go('s-home')"><span class="nav-icon">🏠</span><span class="nav-label">Inicio</span></div>
+        <div class="nav-item" onclick="go('s-add-med')"><span class="nav-icon">➕</span><span class="nav-label">Agregar</span></div>
+        <div class="nav-item" onclick="go('s-historial')"><span class="nav-icon">📊</span><span class="nav-label">Historial</span></div>
+        <div class="nav-item active"><span class="nav-icon">👥</span><span class="nav-label">Cuidador</span></div>
+        <div class="nav-item" onclick="go('s-welcome')"><span class="nav-icon">⚙️</span><span class="nav-label">Ajustes</span></div>
+      </div>
+    </div>
+
+    <!-- S5b: Vincular paciente -->
+    <div class="screen-view" id="s-vincular">
+      <div class="nav-bar orange">
+        <div class="back-btn" onclick="go('s-cuidador')">← Cuidador</div>
+        <div class="nav-title">Vincular paciente</div>
+        <div class="nav-sub">Flujo 3 — Paso 1: Activar modo cuidador</div>
+      </div>
+      <div class="content">
+        <div class="card" style="text-align:center;padding:24px 16px;background:#FFF0E8;box-shadow:none;">
+          <div style="font-size:48px;margin-bottom:8px;">🔗</div>
+          <div style="font-size:18px;font-weight:800;color:var(--dark);margin-bottom:6px;">Tu código de vinculación</div>
+          <div style="font-size:36px;font-weight:900;color:var(--orange);letter-spacing:6px;margin:12px 0;">MED-4821</div>
+          <div style="font-size:12px;color:var(--gray);">Comparte este código con el paciente. Válido por 24 horas.</div>
+        </div>
+        <div class="section-head">¿Cómo vincular?</div>
+        <div class="flow-step">
+          <div class="step-line-wrap"><div class="step-circle" style="background:var(--orange);">1</div><div class="step-connector"></div></div>
+          <div class="step-content"><div class="step-title">Comparte el código</div><div class="step-desc">Envía MED-4821 al paciente por WhatsApp, mensaje o en persona.</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="step-line-wrap"><div class="step-circle" style="background:var(--orange);">2</div><div class="step-connector"></div></div>
+          <div class="step-content"><div class="step-title">El paciente acepta</div><div class="step-desc">Ingresa el código en su app MediAlert → Ajustes → Cuidadores.</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="step-line-wrap"><div class="step-circle" style="background:var(--orange);">3</div></div>
+          <div class="step-content"><div class="step-title">¡Conectados!</div><div class="step-desc">Recibirás alertas cuando el paciente omita una dosis.</div></div>
+        </div>
+        <div style="height:10px;"></div>
+        <button class="btn btn-orange" onclick="go('s-vincular-ok')">✓ El paciente aceptó la solicitud</button>
+        <button class="btn btn-gray" onclick="go('s-cuidador')">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- S5c: Vinculado OK -->
+    <div class="screen-view" id="s-vincular-ok">
+      <div class="nav-bar orange"><div class="nav-title">¡Vinculado!</div></div>
+      <div class="content white" style="display:flex;flex-direction:column;align-items:center;padding:40px 24px;">
+        <div class="success-icon" style="background:#FFF0E8;font-size:38px;">🔗</div>
+        <div class="success-title">Conexión establecida</div>
+        <div class="success-sub" style="margin-bottom:20px;">Ahora puedes supervisar los medicamentos del paciente en tiempo real.</div>
+        <div class="patient-card" style="width:100%;margin-bottom:16px;">
+          <div class="patient-avatar teal">👩</div>
+          <div class="patient-status">
+            <div class="patient-name">Carmen López</div>
+            <div class="patient-info">2 medicamentos configurados</div>
+          </div>
+          <span class="badge badge-green">Activo</span>
+        </div>
+        <div style="background:#FFF0E8;border-radius:12px;padding:12px 14px;width:100%;margin-bottom:20px;">
+          <div style="font-size:13px;color:var(--orange);">🔔 <strong>Alerta activa:</strong> Te notificaremos si Carmen omite alguna dosis.</div>
+        </div>
+        <button class="btn btn-orange" onclick="go('s-cuidador')">Ver panel del cuidador</button>
+      </div>
+    </div>
+
+    <!-- S5d: Alerta al cuidador -->
+    <div class="screen-view" id="s-cuidador-alerta">
+      <div class="nav-bar orange">
+        <div class="back-btn" onclick="go('s-cuidador')">← Cuidador</div>
+        <div class="nav-title">⚠️ Alerta de omisión</div>
+        <div class="nav-sub">Flujo 3 — Paso 4: Alerta al cuidador</div>
+      </div>
+      <div class="content">
+        <div style="background:#FFEBEE;border-radius:16px;padding:16px;margin-bottom:14px;border-left:4px solid #C62828;">
+          <div style="font-size:13px;color:#C62828;font-weight:700;margin-bottom:6px;">🚨 Dosis omitida detectada</div>
+          <div style="font-size:15px;font-weight:800;color:var(--dark);margin-bottom:4px;">Carmen López no tomó:</div>
+          <div style="font-size:14px;color:var(--gray);">Metformina 500mg · Programado: 12:00 PM · Hace 2 horas</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Estado del paciente hoy</div>
+          <div class="med-row">
+            <div class="med-icon teal">💊</div>
+            <div class="med-info"><div class="med-name">Losartan 25mg</div><div class="med-detail">8:05 AM</div></div>
+            <span class="badge badge-green">✓</span>
+          </div>
+          <div class="med-row" style="border:none;">
+            <div class="med-icon orange">💊</div>
+            <div class="med-info"><div class="med-name">Metformina 500mg</div><div class="med-detail">12:00 PM — Omitido</div></div>
+            <span class="badge badge-red">✗</span>
+          </div>
+        </div>
+        <div class="section-head">Acciones del cuidador</div>
+        <button class="btn btn-orange" onclick="go('s-cuidador-resolucion')">📞 Contactar a Carmen</button>
+        <button class="btn btn-secondary" onclick="go('s-cuidador-resolucion')">✓ Marcar dosis manualmente</button>
+        <button class="btn btn-gray" onclick="go('s-cuidador')">Ignorar esta vez</button>
+      </div>
+    </div>
+
+    <!-- S5e: Resolución cuidador -->
+    <div class="screen-view" id="s-cuidador-resolucion">
+      <div class="nav-bar teal"><div class="nav-title">Ciclo completo ✅</div></div>
+      <div class="content white" style="display:flex;flex-direction:column;align-items:center;padding:32px 24px;">
+        <div class="success-icon" style="font-size:40px;">🏁</div>
+        <div class="success-title">Supervisión exitosa</div>
+        <div class="success-sub" style="margin-bottom:20px;">La dosis de Carmen fue registrada. El ciclo de supervisión está completo.</div>
+        <div style="width:100%;background:#E0FAF5;border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+          <div style="font-size:12px;color:#007D6F;font-weight:700;margin-bottom:6px;">Resumen de la acción</div>
+          <div class="info-row"><span class="info-key">Paciente</span><span class="info-val">Carmen López</span></div>
+          <div class="info-row"><span class="info-key">Medicamento</span><span class="info-val">Metformina 500mg</span></div>
+          <div class="info-row" style="border:none;"><span class="info-key">Registrado por</span><span class="info-val">Cuidador · 2:18 PM</span></div>
+        </div>
+        <button class="btn btn-secondary" onclick="go('s-cuidador')">← Volver al panel cuidador</button>
+        <button class="btn btn-primary" onclick="go('s-home')">🏠 Ir al inicio</button>
+      </div>
+    </div>
+
+  </div><!-- /screen -->
+</div><!-- /phone -->
+
+<script>
+function go(id) {
+  document.querySelectorAll('.screen-view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); el.scrollTop = 0; }
+}
+// Day pill toggle
+document.querySelectorAll('.day-pill').forEach(p => p.addEventListener('click', () => p.classList.toggle('on')));
+</script>
+</body>
+</html>
